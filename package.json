@@ -1,0 +1,25 @@
+{
+	"name": "donation-tracker-runner-table",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "remix-serve build/server/index.js",
+		"build": "remix vite:build",
+		"dev": "remix vite:dev"
+	},
+	"dependencies": {
+		"@remix-run/node": "^2.8.1",
+		"@remix-run/react": "^2.8.1",
+		"@remix-run/serve": "^2.8.1",
+		"isbot": "^4",
+		"ky": "^1.2.3",
+		"modern-normalize": "^2.0.0"
+	},
+	"devDependencies": {
+		"@remix-run/dev": "^2.8.1",
+		"@types/react": "^18.2.74",
+		"prettier": "^3.2.5",
+		"typescript": "^5.4.4",
+		"vite": "^5.2.8"
+	}
+}

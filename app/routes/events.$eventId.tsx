@@ -73,7 +73,7 @@ export default function EventRoute() {
 	const data = useLoaderData<typeof loader>();
 
 	return (
-		<div style={{ padding: "8px" }}>
+		<div style={{ fontFamily: "sans-serif", padding: "8px" }}>
 			<table style={{ borderCollapse: "collapse", border: "2px solid black" }}>
 				<thead>
 					<tr>

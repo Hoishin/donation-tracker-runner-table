@@ -47,24 +47,26 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 		throw new Error("Event ID is required");
 	}
 	const { runs, runners } = await fetchApiWithCache(eventId);
-	return runners.map((runner) => ({
-		id: runner.pk,
-		name: runner.fields.name,
-		runs: runs
-			.filter((run) => run.fields.runners.includes(runner.pk))
-			.map((run) => run.fields.name),
-		twitter: runner.fields.twitter,
-		twitch:
-			runner.fields.platform === "TWITCH"
-				? runner.fields.stream
-					? processTwitchUrl(runner.fields.stream)
-					: null
-				: null,
-		youtube:
-			runner.fields.platform === "YOUTUBE"
-				? runner.fields.stream
-				: runner.fields.youtube,
-	}));
+	return runners
+		.map((runner) => ({
+			id: runner.pk,
+			name: runner.fields.name,
+			runs: runs
+				.filter((run) => run.fields.runners.includes(runner.pk))
+				.map((run) => run.fields.name),
+			twitter: runner.fields.twitter,
+			twitch:
+				runner.fields.platform === "TWITCH"
+					? runner.fields.stream
+						? processTwitchUrl(runner.fields.stream)
+						: null
+					: null,
+			youtube:
+				runner.fields.platform === "YOUTUBE"
+					? runner.fields.stream
+					: runner.fields.youtube,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export default function EventRoute() {
@@ -72,22 +74,36 @@ export default function EventRoute() {
 
 	return (
 		<div style={{ padding: "8px" }}>
-			<table>
+			<table style={{ borderCollapse: "collapse", border: "2px solid black" }}>
 				<thead>
 					<tr>
-						<th>Name</th>
-						<th>Twitter</th>
-						<th>Twitch</th>
-						<th>YouTube</th>
+						<th style={{ border: "1px solid black", padding: "4px" }}>Name</th>
+						<th style={{ border: "1px solid black", padding: "4px" }}>
+							Twitter
+						</th>
+						<th style={{ border: "1px solid black", padding: "4px" }}>
+							Twitch
+						</th>
+						<th style={{ border: "1px solid black", padding: "4px" }}>
+							YouTube
+						</th>
 					</tr>
 				</thead>
 				<tbody>
 					{data.map((runner) => (
 						<tr key={runner.id}>
-							<td>{runner.name}</td>
-							<td>{runner.twitter}</td>
-							<td>{runner.twitch}</td>
-							<td>{runner.youtube}</td>
+							<td style={{ border: "1px solid black", padding: "4px" }}>
+								{runner.name}
+							</td>
+							<td style={{ border: "1px solid black", padding: "4px" }}>
+								{runner.twitter}
+							</td>
+							<td style={{ border: "1px solid black", padding: "4px" }}>
+								{runner.twitch}
+							</td>
+							<td style={{ border: "1px solid black", padding: "4px" }}>
+								{runner.youtube}
+							</td>
 						</tr>
 					))}
 				</tbody>

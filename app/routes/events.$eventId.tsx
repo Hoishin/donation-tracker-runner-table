@@ -51,6 +51,7 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 		.map((runner) => ({
 			id: runner.pk,
 			name: runner.fields.name,
+			pronouns: runner.fields.pronouns,
 			runs: runs
 				.filter((run) => run.fields.runners.includes(runner.pk))
 				.map((run) => run.fields.name),
@@ -79,6 +80,9 @@ export default function EventRoute() {
 					<tr>
 						<th style={{ border: "1px solid black", padding: "4px" }}>Name</th>
 						<th style={{ border: "1px solid black", padding: "4px" }}>
+							Pronouns
+						</th>
+						<th style={{ border: "1px solid black", padding: "4px" }}>
 							Twitter
 						</th>
 						<th style={{ border: "1px solid black", padding: "4px" }}>
@@ -94,6 +98,9 @@ export default function EventRoute() {
 						<tr key={runner.id}>
 							<td style={{ border: "1px solid black", padding: "4px" }}>
 								{runner.name}
+							</td>
+							<td style={{ border: "1px solid black", padding: "4px" }}>
+								{runner.pronouns}
 							</td>
 							<td style={{ border: "1px solid black", padding: "4px" }}>
 								{runner.twitter}

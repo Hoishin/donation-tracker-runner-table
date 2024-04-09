@@ -2,6 +2,7 @@ import { useLoaderData, type ClientLoaderFunctionArgs } from "@remix-run/react";
 import ky from "ky";
 import runSample from "../../sample/run.json";
 import runnerSample from "../../sample/runner.json";
+import eventSample from "../../sample/event.json";
 import { useState } from "react";
 
 const twitchNameRegex = /^https?:\/\/(www\.)?twitch\.tv\/([^\/]+)\/?/;
@@ -15,16 +16,18 @@ const apiUrl = "https://tracker.rpglimitbreak.com/search/";
 const cache: {
 	runs: typeof runSample | null;
 	runners: typeof runnerSample | null;
+	events: typeof eventSample | null;
 	timestamp: number;
 } = {
 	runs: null,
 	runners: null,
+	events: null,
 	timestamp: 0,
 };
 
 const fetchApiWithCache = async (eventId: string) => {
 	if (cache.runs && cache.runners && Date.now() - cache.timestamp < 60_000) {
-		return { runs: cache.runs, runners: cache.runners };
+		return { runs: cache.runs, runners: cache.runners, events: cache.events };
 	}
 	const runsUrl = new URL(apiUrl);
 	runsUrl.searchParams.set("type", "run");
@@ -32,14 +35,18 @@ const fetchApiWithCache = async (eventId: string) => {
 	const runnersUrl = new URL(apiUrl);
 	runnersUrl.searchParams.set("type", "runner");
 	runnersUrl.searchParams.set("event", eventId);
-	const [runs, runners] = await Promise.all([
+	const eventsUrl = new URL(apiUrl);
+	eventsUrl.searchParams.set("type", "event");
+	const [runs, runners, events] = await Promise.all([
 		ky.get(runsUrl.href).json<typeof runSample>(),
 		ky.get(runnersUrl.href).json<typeof runnerSample>(),
+		ky.get(eventsUrl.href).json<typeof eventSample>(),
 	]);
 	cache.runs = runs;
 	cache.runners = runners;
+	cache.events = events;
 	cache.timestamp = Date.now();
-	return { runs, runners };
+	return { runs, runners, events };
 };
 
 export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
@@ -47,13 +54,13 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 	if (!eventId) {
 		throw new Error("Event ID is required");
 	}
-	const { runs, runners } = await fetchApiWithCache(eventId);
-	return runners
+	const data = await fetchApiWithCache(eventId);
+	const runners = data.runners
 		.map((runner) => ({
 			id: runner.pk,
 			name: runner.fields.name,
 			pronouns: runner.fields.pronouns,
-			runs: runs
+			runs: data.runs
 				.filter((run) => run.fields.runners.includes(runner.pk))
 				.map((run) => run.fields.name),
 			twitter: runner.fields.twitter,
@@ -69,6 +76,11 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 					: runner.fields.youtube,
 		}))
 		.sort((a, b) => a.name.localeCompare(b.name));
+	const eventName = data.events?.find(
+		(event) => event.pk === parseInt(eventId, 10),
+	)?.fields.name;
+
+	return { eventName, runners };
 };
 
 export default function EventRoute() {
@@ -76,7 +88,7 @@ export default function EventRoute() {
 
 	const [searchText, setSearchText] = useState("");
 
-	const filteredData = data.filter((runner) =>
+	const filteredRunners = data.runners.filter((runner) =>
 		[runner.name, ...runner.runs].some((text) =>
 			text.toLowerCase().includes(searchText.toLowerCase()),
 		),
@@ -92,6 +104,7 @@ export default function EventRoute() {
 				gap: "8px",
 			}}
 		>
+			<h1 style={{ margin: 0, fontSize: "24px" }}>{data.eventName}</h1>
 			<input
 				type="text"
 				placeholder="Search by names, game titles..."
@@ -120,7 +133,7 @@ export default function EventRoute() {
 					</tr>
 				</thead>
 				<tbody>
-					{filteredData.map((runner) => (
+					{filteredRunners.map((runner) => (
 						<tr key={runner.id}>
 							<td style={{ border: "1px solid black", padding: "4px" }}>
 								{runner.name}

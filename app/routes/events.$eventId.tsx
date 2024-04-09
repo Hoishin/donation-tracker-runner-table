@@ -2,6 +2,7 @@ import { useLoaderData, type ClientLoaderFunctionArgs } from "@remix-run/react";
 import ky from "ky";
 import runSample from "../../sample/run.json";
 import runnerSample from "../../sample/runner.json";
+import { useState } from "react";
 
 const twitchNameRegex = /^https?:\/\/(www\.)?twitch\.tv\/([^\/]+)\/?/;
 const processTwitchUrl = (urlString: string) => {
@@ -73,8 +74,33 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 export default function EventRoute() {
 	const data = useLoaderData<typeof loader>();
 
+	const [searchText, setSearchText] = useState("");
+
+	const filteredData = data.filter((runner) =>
+		[runner.name, ...runner.runs].some((text) =>
+			text.toLowerCase().includes(searchText.toLowerCase()),
+		),
+	);
+
 	return (
-		<div style={{ fontFamily: "sans-serif", padding: "8px" }}>
+		<div
+			style={{
+				fontFamily: "sans-serif",
+				padding: "8px",
+				display: "grid",
+				placeContent: "start",
+				gap: "8px",
+			}}
+		>
+			<input
+				type="text"
+				placeholder="Search by names, game titles..."
+				value={searchText}
+				onChange={(e) => {
+					setSearchText(e.target.value);
+				}}
+				style={{ justifySelf: "stretch" }}
+			/>
 			<table style={{ borderCollapse: "collapse", border: "2px solid black" }}>
 				<thead>
 					<tr>
@@ -94,7 +120,7 @@ export default function EventRoute() {
 					</tr>
 				</thead>
 				<tbody>
-					{data.map((runner) => (
+					{filteredData.map((runner) => (
 						<tr key={runner.id}>
 							<td style={{ border: "1px solid black", padding: "4px" }}>
 								{runner.name}

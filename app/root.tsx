@@ -1,3 +1,5 @@
+import "modern-normalize";
+
 import type { MetaFunction } from "@remix-run/node";
 import {
 	Links,

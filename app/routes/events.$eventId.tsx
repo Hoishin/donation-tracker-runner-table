@@ -1,9 +1,9 @@
 import { useLoaderData, type ClientLoaderFunctionArgs } from "@remix-run/react";
-import ky from "ky";
-import runSample from "../../sample/run.json";
-import runnerSample from "../../sample/runner.json";
-import eventSample from "../../sample/event.json";
 import { useState } from "react";
+import type { Run } from "../tracker/run";
+import type { Talent } from "../tracker/talent";
+import type { Event } from "../tracker/event";
+import got from "got";
 
 const twitchNameRegex = /^https?:\/\/(www\.)?twitch\.tv\/([^\/]+)\/?/;
 const processTwitchUrl = (urlString: string) => {
@@ -11,12 +11,12 @@ const processTwitchUrl = (urlString: string) => {
 	return match?.[2] ?? "???";
 };
 
-const apiUrl = "https://tracker.rpglimitbreak.com/search/";
+const apiUrl = "https://tracker.rpglimitbreak.com";
 
 const cache: {
-	runs: typeof runSample | null;
-	runners: typeof runnerSample | null;
-	events: typeof eventSample | null;
+	runs: Run[] | null;
+	runners: Talent[] | null;
+	events: Event[] | null;
 	timestamp: number;
 } = {
 	runs: null,
@@ -25,27 +25,54 @@ const cache: {
 	timestamp: 0,
 };
 
+type ResponseType<T> = {
+	count: number;
+	next: string | null;
+	previous: string | null;
+	results: T[];
+};
+
+const requestResource = async <T,>(url: string) => {
+	return got.paginate.all<T, ResponseType<T>>(url, {
+		responseType: "json",
+		pagination: {
+			transform: ({ body }) => {
+				return body.results;
+			},
+			paginate: ({ response: { body } }) => {
+				if (!body.next) {
+					return false;
+				}
+				return {
+					url: new URL(body.next),
+				};
+			},
+		},
+	});
+};
+
 const fetchApiWithCache = async (eventId: string) => {
 	if (cache.runs && cache.runners && Date.now() - cache.timestamp < 60_000) {
 		return { runs: cache.runs, runners: cache.runners, events: cache.events };
 	}
-	const runsUrl = new URL(apiUrl);
-	runsUrl.searchParams.set("type", "run");
-	runsUrl.searchParams.set("event", eventId);
-	const runnersUrl = new URL(apiUrl);
-	runnersUrl.searchParams.set("type", "runner");
-	runnersUrl.searchParams.set("event", eventId);
-	const eventsUrl = new URL(apiUrl);
-	eventsUrl.searchParams.set("type", "event");
+
+	const runsUrl = new URL(`/api/v2/events/${eventId}/runs`, apiUrl);
+
+	const runnersUrl = new URL(`/api/v2/events/${eventId}/talent`, apiUrl);
+
+	const eventsUrl = new URL("/api/v2/events", apiUrl);
+
 	const [runs, runners, events] = await Promise.all([
-		ky.get(runsUrl.href).json<typeof runSample>(),
-		ky.get(runnersUrl.href).json<typeof runnerSample>(),
-		ky.get(eventsUrl.href).json<typeof eventSample>(),
+		requestResource<Run>(runsUrl.href),
+		requestResource<Talent>(runnersUrl.href),
+		requestResource<Event>(eventsUrl.href),
 	]);
+
 	cache.runs = runs;
 	cache.runners = runners;
 	cache.events = events;
 	cache.timestamp = Date.now();
+
 	return { runs, runners, events };
 };
 
@@ -57,28 +84,25 @@ export const loader = async ({ params }: ClientLoaderFunctionArgs) => {
 	const data = await fetchApiWithCache(eventId);
 	const runners = data.runners
 		.map((runner) => ({
-			id: runner.pk,
-			name: runner.fields.name,
-			pronouns: runner.fields.pronouns,
+			id: runner.id,
+			name: runner.name,
+			pronouns: runner.pronouns,
 			runs: data.runs
-				.filter((run) => run.fields.runners.includes(runner.pk))
-				.map((run) => run.fields.name),
-			twitter: runner.fields.twitter,
+				.filter((run) => run.runners.some((r) => r.id === runner.id))
+				.map((run) => run.name),
+			twitter: runner.twitter,
 			twitch:
-				runner.fields.platform === "TWITCH"
-					? runner.fields.stream
-						? processTwitchUrl(runner.fields.stream)
+				runner.platform === "TWITCH"
+					? runner.stream
+						? processTwitchUrl(runner.stream)
 						: null
 					: null,
-			youtube:
-				runner.fields.platform === "YOUTUBE"
-					? runner.fields.stream
-					: runner.fields.youtube,
+			youtube: runner.platform === "YOUTUBE" ? runner.stream : runner.youtube,
 		}))
 		.sort((a, b) => a.name.localeCompare(b.name));
 	const eventName = data.events?.find(
-		(event) => event.pk === parseInt(eventId, 10),
-	)?.fields.name;
+		(event) => event.id === parseInt(eventId, 10),
+	)?.name;
 
 	return { eventName, runners };
 };

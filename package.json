@@ -11,9 +11,10 @@
 		"@remix-run/node": "^2.8.1",
 		"@remix-run/react": "^2.8.1",
 		"@remix-run/serve": "^2.8.1",
+		"got": "^14.4.7",
 		"isbot": "^4",
-		"ky": "^1.2.3",
-		"modern-normalize": "^2.0.0"
+		"modern-normalize": "^2.0.0",
+		"zod": "^3.24.4"
 	},
 	"devDependencies": {
 		"@remix-run/dev": "^2.8.1",

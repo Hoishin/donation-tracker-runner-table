@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 
 WORKDIR /app
 
@@ -10,7 +10,6 @@ RUN npm ci
 
 COPY vite.config.ts tsconfig.json ./
 COPY app app
-COPY sample sample
 
 RUN npm run build
 
